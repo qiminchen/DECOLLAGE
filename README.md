@@ -76,7 +76,7 @@ delete voxel - shift + left click
 rotate - left click + drag
 zoom in/out - scroll wheel
 ```
-GUI currently only supports editing voxel from scratch, more input formats will be supported in the future.
+GUI currently supports editing voxel from scratch or importing a coarse voxel from `.hdf5` file, more input formats will be supported in the future, it should be relatively easy to modify the `gui_demo.py` to support any format.
 
 ### Demo video
 Demo video can be found in the `/gui` folder
