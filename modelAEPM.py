@@ -273,11 +273,11 @@ class IM_AE(object):
         Dmasks.append(dmask)
 
         # Dmask for 256 from 16, 16 -> 128 -> 128-4-4=120
-        # crop_margin = 4
-        # dmask_tensor = F.interpolate(smallmasks_tensor, scale_factor=8, mode='nearest')
-        # dmask_tensor = dmask_tensor[:, :, crop_margin:-crop_margin, crop_margin:-crop_margin, crop_margin:-crop_margin]
-        # dmask = np.round(dmask_tensor.detach().cpu().numpy()[0]).astype(np.uint8)
-        # Dmasks.append(dmask)
+        crop_margin = 4
+        dmask_tensor = F.interpolate(smallmasks_tensor, scale_factor=8, mode='nearest')
+        dmask_tensor = dmask_tensor[:, :, crop_margin:-crop_margin, crop_margin:-crop_margin, crop_margin:-crop_margin]
+        dmask = np.round(dmask_tensor.detach().cpu().numpy()[0]).astype(np.uint8)
+        Dmasks.append(dmask)
 
         # --------------------------------- Jmask ---------------------------------
         Jmasks = []
@@ -310,11 +310,11 @@ class IM_AE(object):
         Jmasks.append(jmask)
 
         # Jmasks for 256 from 16, 16 -> 128 -> 128-4-4=120
-        # crop_margin = 4
-        # jmask_tensor = F.interpolate(smalljoints_tensor, scale_factor=8, mode='nearest')
-        # jmask_tensor = jmask_tensor[:, :, crop_margin:-crop_margin, crop_margin:-crop_margin, crop_margin:-crop_margin]
-        # jmask = np.round(jmask_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
-        # Jmasks.append(jmask)
+        crop_margin = 4
+        jmask_tensor = F.interpolate(smalljoints_tensor, scale_factor=8, mode='nearest')
+        jmask_tensor = jmask_tensor[:, :, crop_margin:-crop_margin, crop_margin:-crop_margin, crop_margin:-crop_margin]
+        jmask = np.round(jmask_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
+        Jmasks.append(jmask)
 
         return input_vox, input_seg, Dmasks, Jmasks
 
@@ -326,19 +326,19 @@ class IM_AE(object):
         style_voxels = []
 
         # 32
-        smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=4, stride=4, padding=0)
+        smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=8, stride=8, padding=0)
         smallmaskx = np.round(smallmaskx_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
         style_voxels.append(self.progressive_gaussian_blur(smallmaskx.astype(np.float32), iterations=4))
 
         # 64
-        smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=2, stride=2, padding=0)
+        smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=4, stride=4, padding=0)
         smallmaskx = np.round(smallmaskx_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
         style_voxels.append(self.progressive_gaussian_blur(smallmaskx.astype(np.float32), iterations=4))
 
         # 128
-        # smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=2, stride=2, padding=0)
-        # smallmaskx = np.round(smallmaskx_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
-        # style_voxels.append(self.progressive_gaussian_blur(smallmaskx.astype(np.float32), iterations=4))
+        smallmaskx_tensor = F.max_pool3d(vox_tensor, kernel_size=2, stride=2, padding=0)
+        smallmaskx = np.round(smallmaskx_tensor.detach().cpu().numpy()[0, 0]).astype(np.uint8)
+        style_voxels.append(self.progressive_gaussian_blur(smallmaskx.astype(np.float32), iterations=4))
 
         # 256
         style_voxels.append(self.progressive_gaussian_blur(vox.astype(np.float32), iterations=4))
@@ -630,7 +630,7 @@ class IM_AE(object):
             'discriminator_l1': self.discriminator[0].state_dict(),
             'discriminator_l2': self.discriminator[1].state_dict(),
             'discriminator_l3': self.discriminator[2].state_dict(),
-            # 'discriminator_l4': self.discriminator[3].state_dict(),
+            'discriminator_l4': self.discriminator[3].state_dict(),
         }, save_dir)
 
     def print_param(self):
@@ -640,6 +640,7 @@ class IM_AE(object):
         print("Discriminator l1 # param: ", sum(p.numel() for p in self.discriminator[0].parameters() if p.requires_grad))
         print("Discriminator l2 # param: ", sum(p.numel() for p in self.discriminator[1].parameters() if p.requires_grad))
         print("Discriminator l3 # param: ", sum(p.numel() for p in self.discriminator[2].parameters() if p.requires_grad))
+        print("Discriminator l4 # param: ", sum(p.numel() for p in self.discriminator[3].parameters() if p.requires_grad))
         print("Alpha:                    ", self.param_alpha)
         print("Beta:                     ", self.param_beta)
         print("Input size:               ", self.input_size)
@@ -729,7 +730,7 @@ class IM_AE(object):
                     loss_a_log = []
                     loss_u_log = []
                     for i in range(self.upsample_level):
-
+                        
                         Jmask_fake = torch.from_numpy(self.Jmask_content[dxb][i]).to(self.device).unsqueeze(0).unsqueeze(0).float()
                         Dmask_fake = torch.from_numpy(self.Dmask_content[dxb][i]).to(self.device).unsqueeze(0).float()
                         Dmask_fake_global = torch.max(Dmask_fake, dim=1, keepdim=True)[0]
@@ -839,7 +840,7 @@ class IM_AE(object):
         self.generator.eval()
 
         data_dir = self.data_dir[:-1] + '_test'
-        self.dataset_names = os.listdir(data_dir)
+        self.dataset_names = os.listdir(data_dir)[:10]
         self.dataset_len = len(self.dataset_names)
 
         print("testing {} contents with {} styles...".format(self.dataset_len, self.styleset_len))
@@ -871,9 +872,8 @@ class IM_AE(object):
             save_dir = os.path.join(config.sample_dir, self.dataset_names[i])
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            # else:
-            #     continue
 
+            # change your own style id
             test_id_sets = [[4, 11, 24, 8], [9, 6, 22, 1], [21, 4, 20, 10], [9, 11, 19, 5], [3, 3, 18, 9]]
 
             for test_id in test_id_sets:
@@ -889,149 +889,6 @@ class IM_AE(object):
                     zs = torch.matmul(zs, tmp_Smask_fake).view(1, self.z_dim, dimx, dimy, dimz)  # (1, self.z_dim, dimx, dimy, dimz)
 
                     voxel_fake = self.generator(input_fake, Smask_fake * input_fake, zs, is_training=True)
-                    # voxel_fake = self.generator(input_fake, zs, is_training=True)
-
-                    geometry_voxel_fake = voxel_fake[-1].detach().cpu().numpy()[0, 0]
-                    geometry_voxel = self.recover_voxel_by_padding(geometry_voxel_fake, self.output_size // 2 ** (self.upsample_level - 2 - 1))
-                    vertices, triangles = mcubes.marching_cubes(geometry_voxel, self.sampling_threshold)
-                    vertices = (vertices + 0.5) / geometry_voxel.shape[0] - 0.5
-                    write_ply_triangle(save_dir + "/" + file_name, vertices, triangles)
-
-            input_fake = F.interpolate(input_fake, scale_factor=self.upsample_rate, mode='nearest').detach().cpu().numpy()[0, 0]
-            input_fake = self.recover_voxel_by_padding(input_fake, self.output_size)
-            vertices, triangles = mcubes.marching_cubes(input_fake, self.sampling_threshold)
-            vertices = (vertices + 0.5) / input_fake.shape[0] - 0.5
-            write_ply_triangle(save_dir + "/" + "input_coarse_voxel.ply", vertices, triangles)
-
-    def test_coarse_voxel_from_gui(self, config):
-        # for chair-table
-        if not self.load():
-            exit(-1)
-
-        self.generator.eval()
-
-        data_dir = self.data_dir[:-1] + '_test'
-        self.dataset_names = os.listdir(data_dir)
-        self.dataset_len = len(self.dataset_names)
-
-        print("testing {} contents with {} styles...".format(self.dataset_len, self.styleset_len))
-
-        for i in range(self.dataset_len):
-
-            data_path = os.path.join(data_dir, self.dataset_names[i] + "/gui_model_test.hdf5")
-            data_dict = h5py.File(data_path, 'r')
-            geo_raw = data_dict["coarse_geo"][:]  # (16, 16, 16)
-            seg_raw = data_dict["coarse_seg"][:]  # (16, 16, 16)
-            data_dict.close()
-
-            xmin, xmax = np.nonzero(np.sum(geo_raw, axis=(1, 2)))[0][[0, -1]]
-            ymin, ymax = np.nonzero(np.sum(geo_raw, axis=(0, 2)))[0][[0, -1]]
-            zmin, zmax = np.nonzero(np.sum(geo_raw, axis=(0, 1)))[0][[0, -1]]
-            print("xmin: {}, xmax: {}, ymin: {}, ymax: {}, zmin: {}, zmax: {}".format(xmin, xmax, ymin, ymax, zmin, zmax))
-            tmp_geo = geo_raw[xmin - 1:xmax + 2, ymin - 2:ymax + 3, zmin - 2:zmax + 3]
-            tmp_seg = seg_raw[xmin - 1:xmax + 2, ymin - 2:ymax + 3, zmin - 2:zmax + 3]
-
-            input_fake = torch.from_numpy(tmp_geo).to(self.device).unsqueeze(0).unsqueeze(0).float()
-            Smask_fake = torch.from_numpy(tmp_seg).to(self.device).unsqueeze(0).unsqueeze(0).float()
-            _, _, dimx, dimy, dimz = Smask_fake.size()
-            Smask_fake = F.one_hot(Smask_fake.contiguous().view(dimx * dimy * dimz).long(),
-                                   num_classes=self.num_parts + 1)[:, 1:].contiguous().permute(1, 0).view(1, self.num_parts, dimx, dimy, dimz).float()
-
-            save_dir = os.path.join(config.sample_dir, self.dataset_names[i])
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-
-            test_id_sets = [[4, 11, 24, 8], [9, 6, 22, 1], [21, 4, 20, 10], [9, 11, 19, 5], [3, 3, 18, 9]]
-
-            for test_id in test_id_sets:
-                seat_id, arm_id, leg_id, back_id = test_id
-                file_name = 'seat_{}_arm_{}_leg_{}_back_{}.ply'.format(seat_id, arm_id, leg_id, back_id)
-                with torch.no_grad():
-                    _, _, dimx, dimy, dimz = input_fake.size()
-                    tmp_Smask_fake = Smask_fake.view(self.num_parts, dimx * dimy * dimz)
-                    zs_vector = torch.zeros([self.styleset_len, self.num_parts], device=self.device)
-                    zs_vector[[back_id, seat_id, leg_id, arm_id, 5], torch.arange(self.num_parts)] = 1
-                    zs = torch.matmul(self.generator.style_codes, zs_vector)  # (self.z_dim, self.num_parts)
-                    zs = torch.matmul(zs, tmp_Smask_fake).view(1, self.z_dim, dimx, dimy, dimz)  # (1, self.z_dim, dimx, dimy, dimz)
-
-                    voxel_fake = self.generator(input_fake, Smask_fake * input_fake, zs, is_training=True)
-                    # voxel_fake = self.generator(input_fake, zs, is_training=True)
-
-                    geometry_voxel_fake = voxel_fake[-1].detach().cpu().numpy()[0, 0]
-                    geometry_voxel = self.recover_voxel_by_padding(geometry_voxel_fake, self.output_size // 2 ** (self.upsample_level - 2 - 1))
-                    vertices, triangles = mcubes.marching_cubes(geometry_voxel, self.sampling_threshold)
-                    vertices = (vertices + 0.5) / geometry_voxel.shape[0] - 0.5
-                    write_ply_triangle(save_dir + "/" + file_name, vertices, triangles)
-
-            input_fake = F.interpolate(input_fake, scale_factor=self.upsample_rate, mode='nearest').detach().cpu().numpy()[0, 0]
-            input_fake = self.recover_voxel_by_padding(input_fake, self.output_size)
-            vertices, triangles = mcubes.marching_cubes(input_fake, self.sampling_threshold)
-            vertices = (vertices + 0.5) / input_fake.shape[0] - 0.5
-            write_ply_triangle(save_dir + "/" + "input_coarse_voxel.ply", vertices, triangles)
-
-    def test_coarse_voxel_from_gui_bpcc(self, config):
-
-        if not self.load():
-            exit(-1)
-
-        self.generator.eval()
-
-        data_dir = self.data_dir[:-1] + '_test'
-        self.dataset_names = os.listdir(data_dir)
-        self.dataset_len = len(self.dataset_names)
-
-        print("testing {} contents with {} styles...".format(self.dataset_len, self.styleset_len))
-
-        for i in range(self.dataset_len):
-
-            data_path = os.path.join(data_dir, self.dataset_names[i] + "/gui_model_test.hdf5")
-            data_dict = h5py.File(data_path, 'r')
-            geo_raw = data_dict["coarse_geo"][:]  # (16, 16, 16)
-            seg_raw = data_dict["coarse_seg"][:]  # (16, 16, 16)
-            data_dict.close()
-
-            mask_margin = 1
-            xmin, xmax = np.nonzero(np.sum(geo_raw, axis=(1, 2)))[0][[0, -1]]
-            ymin, ymax = np.nonzero(np.sum(geo_raw, axis=(0, 2)))[0][[0, -1]]
-            zmin, zmax = np.nonzero(np.sum(geo_raw, axis=(0, 1)))[0][[0, -1]]
-            print("xmin: {}, xmax: {}, ymin: {}, ymax: {}, zmin: {}, zmax: {}".format(xmin, xmax, ymin, ymax, zmin, zmax))
-            tmp_geo = geo_raw[xmin:xmax + 1, ymin:ymax + 1, zmin:zmax + 1]
-            tmp_seg = seg_raw[xmin:xmax + 1, ymin:ymax + 1, zmin:zmax + 1]
-            tmp_geo = np.pad(tmp_geo, ((mask_margin, mask_margin), (mask_margin, mask_margin), (mask_margin, mask_margin)), 'constant', constant_values=0)
-            tmp_seg = np.pad(tmp_seg, ((mask_margin, mask_margin), (mask_margin, mask_margin), (mask_margin, mask_margin)), 'constant', constant_values=0)
-
-            labelled_points = np.stack((np.where(tmp_geo == 1))).T
-            labels = tmp_seg[labelled_points[:, 0], labelled_points[:, 1], labelled_points[:, 2]]
-            unlabelled_points = np.stack((np.where(tmp_geo == 0))).T
-            labelled_tree = KDTree(labelled_points)
-            _, inds = labelled_tree.query(unlabelled_points, k=1)
-            tmp_seg[unlabelled_points[:, 0], unlabelled_points[:, 1], unlabelled_points[:, 2]] = labels[inds[:, 0]]
-
-            input_fake = torch.from_numpy(tmp_geo).to(self.device).unsqueeze(0).unsqueeze(0).float()
-            Smask_fake = torch.from_numpy(tmp_seg).to(self.device).unsqueeze(0).unsqueeze(0).float()
-            _, _, dimx, dimy, dimz = Smask_fake.size()
-            Smask_fake = F.one_hot(Smask_fake.contiguous().view(dimx * dimy * dimz).long(),
-                                   num_classes=self.num_parts + 1)[:, 1:].contiguous().permute(1, 0).view(1, self.num_parts, dimx, dimy, dimz).float()
-
-            save_dir = os.path.join(config.sample_dir, self.dataset_names[i])
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-
-            test_id_sets = [[10, 9]]
-
-            for test_id in test_id_sets:
-                bottom_id, top_id = test_id
-                file_name = 'bottom_{}_top_{}.ply'.format(bottom_id, top_id)
-                with torch.no_grad():
-                    _, _, dimx, dimy, dimz = input_fake.size()
-                    tmp_Smask_fake = Smask_fake.view(self.num_parts, dimx * dimy * dimz)
-                    zs_vector = torch.zeros([self.styleset_len, self.num_parts], device=self.device)
-                    zs_vector[[bottom_id, top_id], torch.arange(self.num_parts)] = 1
-                    zs = torch.matmul(self.generator.style_codes, zs_vector)  # (self.z_dim, self.num_parts)
-                    zs = torch.matmul(zs, tmp_Smask_fake).view(1, self.z_dim, dimx, dimy, dimz)  # (1, self.z_dim, dimx, dimy, dimz)
-
-                    voxel_fake = self.generator(input_fake, Smask_fake * input_fake, zs, is_training=True)
-                    # voxel_fake = self.generator(input_fake, zs, is_training=True)
 
                     geometry_voxel_fake = voxel_fake[-1].detach().cpu().numpy()[0, 0]
                     geometry_voxel = self.recover_voxel_by_padding(geometry_voxel_fake, self.output_size // 2 ** (self.upsample_level - 2 - 1))
@@ -1049,6 +906,8 @@ class IM_AE(object):
 
         print("Prepare content coarse voxel for visualization...")
         for i in range(self.dataset_len):
+            if i > 10:
+                break
 
             print(i, self.dataset_names[i])
 
@@ -1079,7 +938,7 @@ class IM_AE(object):
         color_maps = {1: [207, 244, 210], 2: [123, 228, 149], 3: [86, 197, 150], 4: [50, 157, 156], 5: [32, 80, 114]}
 
         data_dir = self.data_dir[:-1] + '_test'
-        self.dataset_names = os.listdir(data_dir)
+        self.dataset_names = os.listdir(data_dir)[:10]
         self.dataset_len = len(self.dataset_names)
 
         print("preparing {} contents shapes...".format(self.dataset_len))

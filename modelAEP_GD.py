@@ -678,13 +678,96 @@ class generator_halfsize_x8_decorgan(nn.Module):
         return out
 
 
+class generator_halfsize_x16_decorgan(nn.Module):
+    def __init__(self, g_dim, prob_dim, z_dim, p_dim):
+        super(generator_halfsize_x16_decorgan, self).__init__()
+        self.g_dim = g_dim
+        self.prob_dim = prob_dim
+        self.z_dim = z_dim
+        self.p_dim = p_dim
+
+        style_codes = torch.zeros((self.z_dim, self.prob_dim))
+        self.style_codes = nn.Parameter(style_codes)
+        nn.init.constant_(self.style_codes, 0.0)
+        # self.style_codes = torch.diag(torch.ones(self.z_dim)).cuda()
+
+        self.conv_0 = nn.Conv3d(self.p_dim+1+self.z_dim,  self.g_dim,    3, stride=1, dilation=1, padding=1, bias=True)
+        self.conv_1 = nn.Conv3d(self.g_dim+self.z_dim,    self.g_dim*2,  3, stride=1, dilation=2, padding=2, bias=True)
+        self.conv_2 = nn.Conv3d(self.g_dim*2+self.z_dim,  self.g_dim*4,  3, stride=1, dilation=2, padding=2, bias=True)
+        self.conv_3 = nn.Conv3d(self.g_dim*4+self.z_dim,  self.g_dim*8,  3, stride=1, dilation=1, padding=1, bias=True)
+        self.conv_4 = nn.Conv3d(self.g_dim*8+self.z_dim,  self.g_dim*16,  3, stride=1, dilation=1, padding=1, bias=True)
+
+        self.conv_5 = nn.ConvTranspose3d(self.g_dim*16,  self.g_dim*8, 4, stride=2, padding=1, bias=True)
+        self.conv_6 = nn.Conv3d(self.g_dim*8,  self.g_dim*8,  3, stride=1, padding=1, bias=True)
+        self.conv_7 = nn.ConvTranspose3d(self.g_dim*8,  self.g_dim*4, 4, stride=2, padding=1, bias=True)
+        self.conv_8 = nn.Conv3d(self.g_dim*4,  self.g_dim*4,  3, stride=1, padding=1, bias=True)
+        self.conv_9 = nn.ConvTranspose3d(self.g_dim*4,  self.g_dim*2,   4, stride=2, padding=1, bias=True)
+        self.conv_10 = nn.Conv3d(self.g_dim*2,   self.g_dim*2, 3, stride=1, padding=1, bias=True)
+        self.conv_11 = nn.ConvTranspose3d(self.g_dim * 2, self.g_dim, 4, stride=2, padding=1, bias=True)
+        self.conv_12 = nn.Conv3d(self.g_dim, 1, 3, stride=1, padding=1, bias=True)
+
+    def forward(self, geo_voxels, seg_voxels, z, mask_, is_training=False):
+
+        out = torch.cat([geo_voxels, seg_voxels], dim=1)
+        mask = F.interpolate(mask_, scale_factor=16, mode='nearest')
+
+        zs = z
+
+        out = torch.cat([out,zs], dim=1)
+        out = self.conv_0(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = torch.cat([out,zs], dim=1)
+        out = self.conv_1(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = torch.cat([out,zs], dim=1)
+        out = self.conv_2(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = torch.cat([out,zs], dim=1)
+        out = self.conv_3(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = torch.cat([out,zs], dim=1)
+        out = self.conv_4(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_5(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_6(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_7(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_8(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_9(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_10(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_11(out)
+        out = F.leaky_relu(out, negative_slope=0.02, inplace=True)
+
+        out = self.conv_12(out)
+        out = torch.max(torch.min(out, out*0.002+0.998), out*0.002)
+
+        out = out*mask
+
+        return out
+
+
 if __name__ == '__main__':
-    model = discriminator_l2(d_dim=32, z_dim=16)
-    # geo_voxels = torch.rand(1, 1, 16, 16, 16).cuda()
-    # seg_voxels = torch.rand(1, 5, 16, 16, 16).cuda()
+    # model = discriminator_l2(d_dim=32, z_dim=16)
+    # geo_voxels = torch.rand(1, 1, 128, 128, 128).cuda()
+    seg_voxels = torch.rand(1, 5, 16, 16, 16).cuda()
     # z = torch.rand(1, 8, 16, 16, 16).cuda()
     # model = pyramid_generator_shaddr_x8(g_dim=32, prob_dim=16, z_dim=8, p_dim=5).cuda()
-    # with torch.no_grad():
-    #     out = model(geo_voxels, seg_voxels, z)
-    # print(out[-1].shape)
-    print("Num param: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    # out = model(geo_voxels, seg_voxels, z)
+    # print(out.shape)
+    # print("Num param: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
