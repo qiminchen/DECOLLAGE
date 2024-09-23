@@ -62,7 +62,6 @@ python main.py --data_style style_seg_plant_building_cake_crystal_16 --data_cont
 ```
 cd gui
 python setup.py build_ext --inplace
-
 ```
 2. Make sure you put the checkpoint.pth in the `checkpoint` folder, checkpoint can be found [here (will be updated shortly)]()
 3. Change the `cpk_path` in the `gui_demo.py`
