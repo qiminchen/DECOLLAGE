@@ -31,11 +31,11 @@ python setup.py build_ext --inplace
 ## Datasets and pre-trained weights
 We provide the ready-to-use datasets here. Note that we only use 16 chairs, 16 tables, and 5 plants from ShapeNet; and 5 buildings, 3 cakes, and 3 crystals from 3D Warehouse for training. The training coarse voxels are obtained via data augmentation.
 
-- [DECOLLAGE data (will be updated shortly)]()
+- [DECOLLAGE data](https://drive.google.com/drive/folders/1fbtaSQC3flD6PpvLaT0-DKfdKBLO9mcS?usp=sharing)
 
 We also provide the pre-trained network weights.
 
-- [DECOLLAGE checkpoint (will be updated shortly)]()
+- [DECOLLAGE checkpoint](https://drive.google.com/drive/folders/14bgQ5JOmGaV3i09lDNlKrMqJO5CPNTSf?usp=sharing)
 
 ## Training
 For chair and table style mixing:
@@ -63,7 +63,7 @@ python main.py --data_style style_seg_plant_building_cake_crystal_16 --data_cont
 cd gui
 python setup.py build_ext --inplace
 ```
-2. Make sure you put the checkpoint.pth in the `checkpoint` folder, checkpoint can be found [here (will be updated shortly)]()
+2. Make sure you put the checkpoint.pth in the `checkpoint` folder, checkpoint can be found [here](https://drive.google.com/drive/folders/14bgQ5JOmGaV3i09lDNlKrMqJO5CPNTSf?usp=sharing)
 3. Change the `cpk_path` in the `gui_demo.py`
 4. Run the GUI
 ```
