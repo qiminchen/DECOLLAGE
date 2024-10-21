@@ -8,13 +8,12 @@ Pytorch Implementation of [[ECCV2024] DECOLLAGE: 3D Detailization by Controllabl
 ## Citation
 If you find our work useful in your research, please consider citing (to be updated):
 
-	  @misc{chen2024decollage3ddetailizationcontrollable,
-        title={DECOLLAGE: 3D Detailization by Controllable, Localized, and Learned Geometry Enhancement}, 
-        author={Qimin Chen and Zhiqin Chen and Vladimir G. Kim and Noam Aigerman and Hao Zhang and Siddhartha Chaudhuri},
-        year={2024},
-        eprint={2409.06129},
-        archivePrefix={arXiv},
-      }
+	@inproceedings{chen2025decollage,
+	  title={DECOLLAGE: 3D Detailization by Controllable, Localized, and Learned Geometry Enhancement},
+	  author={Chen, Qimin and Chen, Zhiqin and Kim, Vladimir G and Aigerman, Noam and Zhang, Hao and Chaudhuri, Siddhartha},
+	  booktitle={European Conference on Computer Vision},
+	  year={2025},
+	}
 
 ## Dependencies
 Requirements:
